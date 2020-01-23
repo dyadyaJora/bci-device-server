@@ -8,8 +8,8 @@ const PORT = 3001;
 const INFLUX_HOST = 'localhost';
 const DB_NAME = 'vr_data';
 const influx = new Influx.InfluxDB({
-    host: 'localhost',
-    database: 'express_response_db'
+    host: INFLUX_HOST,
+    database: DB_NAME
 });
 
 app.get('/', function (req, res) {
