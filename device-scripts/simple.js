@@ -2,6 +2,8 @@ var SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline')
 var port = new SerialPort('/dev/ttyACM0', {baudRate: 9600});
 
+const MAX_BATCH_SIZE = 100;
+const MAX_DELAY_MS = 2000;
 
 console.log("Script starting...");
 
@@ -9,11 +11,37 @@ console.log("Script starting...");
 const lineStream = port.pipe(new Readline())
 
 var interval;
+let batch = [];
+let tmp = [];
 lineStream.on('data', line => {
 	let date = new Date();
-	let strRes = line.toString() + ' ' + date.toISOString();
-	console.log(line);
-	console.log(strRes);
+	debugger;
+	if (isNeedSend(batch, date)) {
+		tmp = [].concat(batch);
+		batch = []
+		// @todo http send
+		console.log("Sended tmp");
+	}
+
+	let vars = line.split(';');
+    let pulse = vars[0];
+    let valid = vars[1];
+    let peek = vars[2];
+    let analog= vars[3];
+	let data;
+
+    if (pulse != undefined && valid != undefined && peek != undefined && analog != undefined) {
+	    data = {
+            analog: analog.replace(/\r$/, ''),
+            peek: peek,
+            valid: valid,
+            pulse: pulse,
+            timestamp: new Date().getTime()
+	    }
+
+		batch.push(data);
+    }
+
 	clearInterval(interval)
 })
 
@@ -21,3 +49,11 @@ interval = setInterval( () =>
 	port.write('R', (err, data) => {console.log(err, data)}),
 	1000
 );
+
+function isNeedSend(batch, currentDate) {
+	return batch.length > MAX_BATCH_SIZE || currentDate.getTime() - getMinTime(batch) >  MAX_DELAY_MS;
+}
+
+function getMinTime(batch) {
+	return Math.min.apply(null, batch.map(item => item.timestamp));
+}
