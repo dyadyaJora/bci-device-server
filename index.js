@@ -26,6 +26,8 @@ app.post('/api/v1/sensor', function(req, res) {
     let dataArr = req.body.data;
     let deviceId = req.body.deviceId;
 
+    console.log("data === ", dataArr);
+
     ifxFormat = dataArr.map(item => {
       return {
         measurement: 'sensor',
@@ -54,11 +56,57 @@ app.post('/api/v1/sensor', function(req, res) {
 
 app.post('/api/v1/unity/params', function(req, res) {
 
+  let data = req.body.data;
+  let gameId = req.body.gameId;
+  console.log("unity params == ", data);
+
+  influx.writePoints([
+    {
+      measurement: 'game',
+      tags: {
+        gameId: gameId
+      },
+      fields: {
+        height: data.height,
+        speed: data.speed,
+        acceleration: data.acceleration,
+        fuel: data.fuel,
+        mu: data.mu
+      },
+      timestamp: data.timestamp + "000000"
+    }
+  ]).then(ok => {
+    console.log("ok", ok);
+    res.send(204);
+  }).catch(err => {
+    console.log(err);
     res.send(503);
+  });
 });
 
 app.post('/api/v1/unity/actions', function(req, res) {
+  let data = req.body.data;
+  let gameId = req.body.gameId;
+  console.log("actions data == ", data);
+
+  influx.writePoints([
+    {
+      measurement: 'actions',
+      tags: {
+        gameId: gameId
+      },
+      fields: {
+        action: data.action,
+      },
+      timestamp: data.timestamp + "000000"
+    }
+  ]).then(ok => {
+    console.log("actions ok", ok);
+    res.send(204);
+  }).catch(err => {
+    console.log(err);
     res.send(503);
+  });
 });
 
 app.listen(PORT, function () {
