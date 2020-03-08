@@ -35,10 +35,10 @@ app.post('/api/v1/sensor', function(req, res) {
           deviceId: deviceId
         },
         fields: {
-          pulse: item.pulse,
-          valid: item.valid,
-          peek: item.peek,
-          analog: item.analog
+          pulse: +item.pulse,
+          valid: +item.valid,
+          peek: +item.peek,
+          analog: +item.analog
         },
         timestamp: item.timestamp + "000000"
       }

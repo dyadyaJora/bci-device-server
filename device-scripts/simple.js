@@ -1,16 +1,20 @@
 var SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline')
+const rp = require('request-promise');
 var port = new SerialPort('/dev/ttyACM0', {baudRate: 9600});
 
 const MAX_BATCH_SIZE = 100;
 const MAX_DELAY_MS = 2000;
+// const BASE_HOST = 'http://192.168.1.3:3001'
+const BASE_HOST = 'http://localhost:3001'
+const DEVICE_ID = "my_device_1"
 
 console.log("Script starting...");
 
 // Pipe the data into another stream (like a parser or standard out)
 const lineStream = port.pipe(new Readline())
 
-var interval;
+var initInterval;
 let batch = [];
 let tmp = [];
 lineStream.on('data', line => {
@@ -20,6 +24,15 @@ lineStream.on('data', line => {
 		tmp = [].concat(batch);
 		batch = []
 		// @todo http send
+        rp({
+            method: 'POST',
+            uri: BASE_HOST + '/api/v1/sensor',
+            body: {
+                data: tmp,
+                deviceId: DEVICE_ID
+            },
+            json: true
+        });
 		console.log("Sended tmp");
 	}
 
@@ -42,10 +55,10 @@ lineStream.on('data', line => {
 		batch.push(data);
     }
 
-	clearInterval(interval)
+	clearInterval(initInterval)
 })
 
-interval = setInterval( () =>
+initInterval = setInterval( () =>
 	port.write('R', (err, data) => {console.log(err, data)}),
 	1000
 );
