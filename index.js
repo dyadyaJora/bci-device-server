@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const Influx = require('influx');
+const mongoose = require('mongoose');
 
 const app = express();
 
@@ -17,6 +18,7 @@ const influx = new Influx.InfluxDB({
     host: INFLUX_HOST,
     database: DB_NAME
 });
+const MONGO_URL = "mongodb://localhost:27017/diplom-dev";
 
 app.get('/', function (req, res) {
   res.send('Hello World!');
@@ -172,21 +174,52 @@ app.post('/api/v1/unity/actions', function(req, res) {
   });
 });
 
-app.listen(PORT, function () {
-  console.log('Example app listening on port ' + PORT +'!');
+app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
+  console.log("api GET device/session called");
+  res.sendStatus(204);
 });
 
-influx.getDatabaseNames()
+
+function connectInflux() {
+  return influx.getDatabaseNames()
   .then(names => {
     if (!names.includes(DB_NAME)) {
         return influx.createDatabase(DB_NAME);
     }
   })
-  .then(() => {
-    // http.createServer(app).listen(3000, function () {
-    //   console.log('Listening on port 3000')
-    // })
-  })
+  // .then(() => {
+  //   // http.createServer(app).listen(3000, function () {
+  //   //   console.log('Listening on port 3000')
+  //   // })
+  // })
   .catch(err => {
     console.error(`Error creating Influx database!`)
+  });
+}
+
+function connectMongo() {
+  return mongoose.connect(MONGO_URL, {
+    useNewUrlParser: true,
+    useCreateIndex: true
+  });
+}
+
+function startServer() {
+  app.listen(PORT, function () {
+    console.log('Example app listening on port ' + PORT +'!');
+  });
+}
+
+function start() {
+  connectInflux().then(() => {
+    console.log("influx connected");
+    return connectMongo();
   })
+  .then(() => {
+    console.log("Mongo connected");
+    startServer();
+  })
+  .catch(err => { console.log("some error", err)})
+}
+
+start();
