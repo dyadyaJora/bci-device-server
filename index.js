@@ -22,9 +22,42 @@ app.get('/', function (req, res) {
   res.send('Hello World!');
 });
 
+app.post('/api/v1/sensor/bci', function(req, res) {
+  let dataArr = req.body.data;
+  let deviceId = req.body.deviceId;
+  let sessionId = req.body.sessionId;
+  console.log("DATA received, batch size: " + dataArr.length);
+
+  ifxFormat = dataArr.map(item => {
+    let fieldsObj = {};
+    for (let i = 0; i < 8; i++) {
+      fieldsObj["ch" + i] = item.channelData[i];
+    }
+    return {
+      measurement: 'bci_sensor',
+      tags: {
+        deviceId: deviceId,
+        sessionId: sessionId
+      },
+      fields: fieldsObj,
+      timestamp: item.timestamp + "000000"
+    }
+  });
+
+  influx.writePoints(ifxFormat)
+  .then(ok => {
+    res.send(204);
+  })
+  .catch( err => {
+    console.log(err);
+    res.send(500);
+  })
+});
+
 app.post('/api/v1/sensor', function(req, res) {
     let dataArr = req.body.data;
     let deviceId = req.body.deviceId;
+    let sessionId = req.body.sessionId;
 
     console.log("data === ", dataArr);
 
@@ -32,7 +65,8 @@ app.post('/api/v1/sensor', function(req, res) {
       return {
         measurement: 'sensor',
         tags: {
-          deviceId: deviceId
+          deviceId: deviceId,
+          sessionId: sessionId
         },
         fields: {
           pulse: +item.pulse,
@@ -43,6 +77,35 @@ app.post('/api/v1/sensor', function(req, res) {
         timestamp: item.timestamp + "000000"
       }
     });
+
+    rrFormat = [];
+    for (let i = 0; i < dataArr.length - 1; i++) {
+      let peek;
+      if (!dataArr[i].valid) {
+        peek = 0;
+      }
+      if (dataArr[i].peek < dataArr[i+1].peek)  {
+        if (dataArr[i] == 0) {
+          peek = dataArr[i].timestamp;
+        } else {
+          peek = (dataArr[i].timestamp + dataArr[i+1].timestamp) / 2;
+        }
+      } else {
+        continue;
+      }
+
+      rrFormat.add({
+        measurement: 'rr',
+        tags: {
+          deviceId: deviceId,
+          sessionId: sessionId
+        },
+        fields: {
+          peek: 1
+        },
+        timestamp: item.timestamp + "000000"
+      });
+    }
 
     influx.writePoints(ifxFormat)
       .then(ok => {

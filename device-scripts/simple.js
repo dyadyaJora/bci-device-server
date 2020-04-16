@@ -1,5 +1,6 @@
+const crypto = require('crypto');
 var SerialPort = require('serialport');
-const Readline = require('@serialport/parser-readline')
+const Readline = require('@serialport/parser-readline');
 const rp = require('request-promise');
 var port = new SerialPort('/dev/ttyACM0', {baudRate: 9600});
 
@@ -8,6 +9,7 @@ const MAX_DELAY_MS = 2000;
 // const BASE_HOST = 'http://192.168.1.3:3001'
 const BASE_HOST = 'http://localhost:3001'
 const DEVICE_ID = "my_device_1"
+var sessionId = crypto.randomBytes(16).toString('hex');
 
 console.log("Script starting...");
 
@@ -29,7 +31,8 @@ lineStream.on('data', line => {
             uri: BASE_HOST + '/api/v1/sensor',
             body: {
                 data: tmp,
-                deviceId: DEVICE_ID
+                deviceId: DEVICE_ID,
+                sessionId: sessionId
             },
             json: true
         });
