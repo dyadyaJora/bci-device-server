@@ -176,7 +176,7 @@ app.post('/api/v1/unity/actions', function(req, res) {
 
 app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
     console.log("api GET device/session called");
-    res.sendStatus(204);
+    res.sendStatus(200);
 });
 
 
@@ -211,10 +211,11 @@ function startServer() {
 }
 
 function start() {
-    connectInflux().then(() => {
-        console.log("influx connected");
-        return connectMongo();
-    })
+    connectInflux()
+        .then(() => {
+            console.log("influx connected");
+            return connectMongo();
+        })
         .then(() => {
             console.log("Mongo connected");
             startServer();
