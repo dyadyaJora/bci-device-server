@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-var SerialPort = require('serialport');
+const SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline');
 const rp = require('request-promise');
 var port = new SerialPort('/dev/ttyACM0', {baudRate: 9600});
@@ -19,16 +19,33 @@ const lineStream = port.pipe(new Readline())
 var initInterval;
 let batch = [];
 let tmp = [];
+let from = 0;
 lineStream.on('data', line => {
 	let date = new Date();
 	debugger;
 	if (isNeedSend(batch, date)) {
 		tmp = [].concat(batch);
-		batch = []
+		batch = [];
+		tmp.sort((a,b) => {
+		   if (a.timestamp === b.timestamp) {
+		       return 0;
+           }
+
+		   if (a.timestamp > b.timestamp) {
+		       return 1;
+           } else {
+		       return -1;
+           }
+        });
+		tmp = tmp.map((item, i) => {
+		    item.number = i + from;
+		    return item;
+        });
+		from += tmp.length;
 		// @todo http send
         rp({
             method: 'POST',
-            uri: BASE_HOST + '/api/v1/sensor',
+            uri: BASE_HOST + '/api/v1/sensor/pulse',
             body: {
                 data: tmp,
                 deviceId: DEVICE_ID,

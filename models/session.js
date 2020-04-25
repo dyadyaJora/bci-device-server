@@ -16,7 +16,7 @@ const schema = new mongoose.Schema({
     default: ''
   },
   client: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Device',
     required: true
   }

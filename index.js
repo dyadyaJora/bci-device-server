@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const Influx = require('influx');
 const mongoose = require('mongoose');
+const inService = require('./controllers/in-service');
 
 const app = express();
 
@@ -56,7 +57,7 @@ app.post('/api/v1/sensor/bci', function(req, res) {
         })
 });
 
-app.post('/api/v1/sensor', function(req, res) {
+app.post('/api/v1/sensor/pulse', function(req, res) {
     let dataArr = req.body.data;
     let deviceId = req.body.deviceId;
     let sessionId = req.body.sessionId;
@@ -74,40 +75,41 @@ app.post('/api/v1/sensor', function(req, res) {
                 pulse: +item.pulse,
                 valid: +item.valid,
                 peek: +item.peek,
-                analog: +item.analog
+                analog: +item.analog,
+                number: +item.number
             },
             timestamp: item.timestamp + "000000"
         }
     });
 
-    rrFormat = [];
-    for (let i = 0; i < dataArr.length - 1; i++) {
-        let peek;
-        if (!dataArr[i].valid) {
-            peek = 0;
-        }
-        if (dataArr[i].peek < dataArr[i+1].peek)  {
-            if (dataArr[i] === 0) {
-                peek = dataArr[i].timestamp;
-            } else {
-                peek = (dataArr[i].timestamp + dataArr[i+1].timestamp) / 2;
-            }
-        } else {
-            continue;
-        }
-
-        rrFormat.add({
-            measurement: 'rr',
-            tags: {
-                deviceId: deviceId,
-                sessionId: sessionId
-            },
-            fields: {
-                peek: 1
-            },
-            timestamp: item.timestamp + "000000"
-        });
-    }
+    // rrFormat = [];
+    // for (let i = 0; i < dataArr.length - 1; i++) {
+    //     let peek;
+    //     if (!dataArr[i].valid) {
+    //         peek = 0;
+    //     }
+    //     if (dataArr[i].peek < dataArr[i+1].peek)  {
+    //         if (dataArr[i] === 0) {
+    //             peek = dataArr[i].timestamp;
+    //         } else {
+    //             peek = (dataArr[i].timestamp + dataArr[i+1].timestamp) / 2;
+    //         }
+    //     } else {
+    //         continue;
+    //     }
+    //
+    //     rrFormat.add({
+    //         measurement: 'rr',
+    //         tags: {
+    //             deviceId: deviceId,
+    //             sessionId: sessionId
+    //         },
+    //         fields: {
+    //             peek: 1
+    //         },
+    //         timestamp: item.timestamp + "000000"
+    //     });
+    // }
 
     influx.writePoints(ifxFormat)
         .then(ok => {
@@ -179,6 +181,19 @@ app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
     res.sendStatus(200);
 });
 
+app.get('/tmp', function(req, res) {
+    let deviceId = req.query.deviceId;
+    let sessionId = req.query.sessionId;
+    inService.main(deviceId, sessionId)
+        .then(r => {
+            console.log("Calculated index saved!", r);
+            res.sendStatus(200);
+        })
+        .catch(err => {
+            console.log("Error processing main data", err);
+            res.sendStatus(503);
+        })
+});
 
 function connectInflux() {
     return influx.getDatabaseNames()
