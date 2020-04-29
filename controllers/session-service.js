@@ -8,7 +8,8 @@ function connectMongo() {
     return mongoose.connect(MONGO_URL, {
         useNewUrlParser: true,
         useCreateIndex: true,
-        useFindAndModify: true
+        useUnifiedTopology: true,
+        useFindAndModify: false
     });
 }
 function getSession(sessionHash) {
@@ -20,29 +21,25 @@ function getDevice(deviceHash) {
 }
 
 function getOrCreateDevice(sessionHash, deviceHash) {
-    return Session.findOneAndUpdate({ hash: sessionHash }, {}, { upsert: true })
+    let result = {
+        session: '',
+        device: ''
+    }
+    return Session.findOneAndUpdate({ hash: sessionHash }, {}, { upsert: true, new: true })
         .then((session) => {
-            if (!session) {
-                console.log("Session created!");
-            } else {
-                console.log(session, "== session");
-            }
-            return Device.findOneAndUpdate({ hash: deviceHash }, {}, { upsert: true });
+            result['session'] = session;
+            return Device.findOneAndUpdate({ hash: deviceHash }, {}, { upsert: true, new: true });
         })
         .then(device => {
-            if (!device) {
-                console.log("device created");
-            } else {
-                console.log(device, "== device");
-            }
-            return new Promise((res, rej) => res("I'am OK!"));
+            result['device'] = device;
+            return new Promise((res, rej) => res(result));
         });
 }
 
 function main() {
     connectMongo()
         .then(() => {
-            return getOrCreateDevice("test-session2", "test-device");
+            return getOrCreateDevice("test-session-new-12", "test-device-new12");
         })
         .then(ok => {
             console.log(ok, "!");

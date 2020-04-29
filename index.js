@@ -177,8 +177,11 @@ app.post('/api/v1/unity/actions', function(req, res) {
 });
 
 app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
-    console.log("api GET device/session called");
-    res.sendStatus(200);
+    let deviceId = req.params.deviceId;
+    let sessionId = req.params.sessionId;
+
+    console.log("api GET device/session called with params " + deviceId + " " + sessionId);
+    res.redirect("/research?session=" + sessionId + "&device=" + deviceId);
 });
 
 app.get('/tmp', function(req, res) {
