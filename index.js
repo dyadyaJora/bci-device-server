@@ -4,6 +4,8 @@ const cors = require('cors');
 const Influx = require('influx');
 const mongoose = require('mongoose');
 const inService = require('./controllers/in-service');
+const sessionService = require('./controllers/session-service');
+const Memcached = require('memcached');
 
 const app = express();
 
@@ -19,6 +21,7 @@ const influx = new Influx.InfluxDB({
     host: INFLUX_HOST,
     database: DB_NAME
 });
+const memcached = new Memcached('127.0.0.1:12346');
 const MONGO_URL = "mongodb://localhost:27017/diplom-dev";
 
 app.get('/', function (req, res) {
@@ -180,8 +183,69 @@ app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
     let deviceId = req.params.deviceId;
     let sessionId = req.params.sessionId;
 
+    sessionService.getOrCreateDevice(sessionId, deviceId)
+        .then(data => {
+           if (!data.session || !data.device) {
+               res.sendStatus(403);
+               return;
+           }
+
+           return new Promise((resolve, reject) => {
+               data.session.client = data.device;
+               let key = data.session.hash;
+               let value = data.session;
+               memcached.set(key, value, 0, (err) => {
+                   if (!!err) {
+                       reject(err);
+                       return;
+                   }
+
+                   resolve();
+               })
+           });
+        })
+        .then(() => {
+            console.log("I'M OK!");
+            res.redirect("/research?session=" + sessionId + "&device=" + deviceId);
+        })
+        .catch((err) => {
+            console.error(err);
+            res.send(503);
+        });
+
     console.log("api GET device/session called with params " + deviceId + " " + sessionId);
-    res.redirect("/research?session=" + sessionId + "&device=" + deviceId);
+});
+
+app.post("/cached/:foo/:bar", (req, res) => {
+    let foo = req.params.foo;
+    let bar = req.params.bar;
+
+    memcached.set(foo, bar, 10, function (err) {
+        if (!!err) {
+            console.error(err);
+            res.sendStatus(503);
+            return;
+        }
+
+        res.sendStatus(200);
+    });
+})
+
+app.get("/cached/:deviceId/:sesssionId", (req, res) => {
+    let deviceId = req.params.deviceId;
+    let sessionId = req.params.sessionId;
+
+    memcached.touch(sessionId, 10000, function (err) {
+        if (!!err) {
+            console.log(err);
+            return;
+        }
+
+        memcached.get(sessionId, function (err, data) {
+            console.log(data);
+            res.send(data);
+        });
+    });
 });
 
 app.get('/tmp', function(req, res) {
@@ -218,7 +282,9 @@ function connectInflux() {
 function connectMongo() {
     return mongoose.connect(MONGO_URL, {
         useNewUrlParser: true,
-        useCreateIndex: true
+        useCreateIndex: true,
+        useUnifiedTopology: true,
+        useFindAndModify: false
     });
 }
 

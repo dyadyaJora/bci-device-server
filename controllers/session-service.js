@@ -47,8 +47,6 @@ function main() {
         .catch(err => console.error(err));
 }
 
-main();
-
 module.exports = {
     getSession,
     getDevice,

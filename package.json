@@ -13,10 +13,11 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "influx": "^5.5.1",
+    "memcached": "^2.2.2",
+    "minimist": ">=1.2.3",
     "mongoose": "^5.9.9",
     "request": "^2.88.0",
     "request-promise": "^4.2.5",
-    "serialport": "^8.0.6",
-    "minimist": ">=1.2.3"
+    "serialport": "^8.0.6"
   }
 }
