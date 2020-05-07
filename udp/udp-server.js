@@ -13,6 +13,13 @@ const MEMCACHED_PORT = '12346';
 const Memcached = require('memcached');
 const memcached = new Memcached(MEMCACHED_HOST + ':' + MEMCACHED_PORT);
 
+const config = require('../config.json');
+const kafka = require('kafka-node');
+const ClientKafka = new kafka.KafkaClient(config.kafka.url);
+const Producer = new kafka.HighLevelProducer(ClientKafka);
+const { getTopic, TOPICS } = require('../controllers/kafka-service');
+
+
 server.on('error', (err) => {
     console.log(`server error:\n${err.stack}`);
     server.close();
@@ -20,7 +27,7 @@ server.on('error', (err) => {
 
 server.on('message', (msg, rinfo) => {
     let message = JSON.parse(msg);
-
+    message['time'] = new Date();
     if (!(message.type && message.type === 'bandPower')) {
         return;
     }
@@ -28,7 +35,8 @@ server.on('message', (msg, rinfo) => {
     validateMessage(message)
         .then(exists => {
             if (exists) {
-                return saveBandPower(message);
+                return saveBandPowerToQueue(message);
+                // return saveBandPower(message);
             }
 
             let deviceSessionUrl = 'http://127.0.0.1:3001/api/v1/device/' + message.deviceId + '/session/' + message.sessionId;
@@ -52,8 +60,6 @@ server.on('listening', () => {
     console.log(`server listening ${address.address}:${address.port}`);
 });
 
-server.bind(12345);
-
 function saveBandPower(message) {
     let alfa = 0, beta = 0;
     message.data.forEach(item => { alfa += item[0]; beta+=item[1];} );
@@ -70,6 +76,39 @@ function saveBandPower(message) {
         timestamp: +(new Date()) + "000000"
     }
     return influx.writePoints([point])
+}
+
+function saveBandPowerToQueue(message) {
+    let prepared = calcAlfaBetaRel(message);
+    return new Promise((resolve, reject) => {
+        Producer.send([{topic: TOPICS.DATA, messages: [JSON.stringify(prepared)]}], (err, data) => {
+            if (!!err) {
+                reject(err);
+                return;
+            }
+
+            resolve(data);
+        });
+    });
+}
+
+function calcAlfaBetaRel(message) {
+    let result = {
+        deviceId: message.deviceId,
+        sessionId: message.sessionId,
+        type: message.type,
+        time: message.time
+    };
+
+    if (!message || !message.data || !message.data.length) {
+        return {};
+    }
+
+    result['data'] = message.data.map(values => {
+        return values[3] / values[2];
+    });
+
+    return result;
 }
 
 function validateMessage(message) {
@@ -93,3 +132,12 @@ function validateMessage(message) {
         });
     });
 }
+
+(function startUdpServer() {
+    getTopic(TOPICS.DATA)
+        .then(() => {
+            server.bind(config.udp.port);
+        }).catch(err => {
+            console.log('Error starting udp server', err);
+        });
+})();
