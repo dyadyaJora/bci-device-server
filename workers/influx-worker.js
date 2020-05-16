@@ -5,7 +5,7 @@ const influx = new Influx.InfluxDB({
     host: INFLUX_HOST,
     database: DB_NAME
 });
-
+const config = require('../config.json');
 const kafka = require('kafka-node');
 const ClientKafka = new kafka.KafkaClient(config.kafka.url);
 const Producer = new kafka.HighLevelProducer(ClientKafka);
@@ -26,7 +26,7 @@ consumer.on('message', message => {
                 type: value.type,
                 time: value.time
             }
-            Producer.send([{ topic: TOPICS.CALC, messages: [value]}], (err, res) => {})
+            Producer.send([{ topic: TOPICS.CALC, messages: [JSON.stringify(messageForCalc)]}], (err, res) => {})
         })
         .catch(err => {
             console.error(err);
@@ -49,3 +49,5 @@ function saveBandPower(value) {
     }
     return influx.writePoints([point])
 }
+
+console.log('INFLUX WORKER started');
