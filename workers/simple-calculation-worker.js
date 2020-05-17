@@ -85,3 +85,5 @@ function differentiateState(deviceId, sessionId, time) {
             return new Promise(resolve => {resolve(result)});
         })
 }
+
+console.log("CALCULATIONS WORKER STARTED");

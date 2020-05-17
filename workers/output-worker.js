@@ -47,3 +47,5 @@ consumer.on('message', message => {
         }
     ]);
 });
+
+console.log("OUTPUT WORKER STARTED");
