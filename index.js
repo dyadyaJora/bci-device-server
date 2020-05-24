@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const inService = require('./controllers/in-service');
 const sessionService = require('./controllers/session-service');
 const Memcached = require('memcached');
+const { PythonShell } = require('python-shell');
 
 const app = express();
 
@@ -85,37 +86,25 @@ app.post('/api/v1/sensor/pulse', function(req, res) {
         }
     });
 
-    // rrFormat = [];
-    // for (let i = 0; i < dataArr.length - 1; i++) {
-    //     let peek;
-    //     if (!dataArr[i].valid) {
-    //         peek = 0;
-    //     }
-    //     if (dataArr[i].peek < dataArr[i+1].peek)  {
-    //         if (dataArr[i] === 0) {
-    //             peek = dataArr[i].timestamp;
-    //         } else {
-    //             peek = (dataArr[i].timestamp + dataArr[i+1].timestamp) / 2;
-    //         }
-    //     } else {
-    //         continue;
-    //     }
-    //
-    //     rrFormat.add({
-    //         measurement: 'rr',
-    //         tags: {
-    //             deviceId: deviceId,
-    //             sessionId: sessionId
-    //         },
-    //         fields: {
-    //             peek: 1
-    //         },
-    //         timestamp: item.timestamp + "000000"
-    //     });
-    // }
-
     influx.writePoints(ifxFormat)
-        .then(ok => {
+        .then(() => {
+            let pyOptions = {
+                pythonPath: './calculations/venv/bin/python3',
+                pythonOptions: ['-W ignore'],
+                scriptPath: './calculations',
+                args: [sessionId]
+            };
+            return new Promise((resolve, reject) => {
+                PythonShell.run('calc_rr.py', pyOptions, function (err, results) {
+                    if (err) {
+                        reject(err);
+                    }
+                    console.log('results: %j', results);
+                    resolve(results);
+                });
+            });
+        })
+        .then(() => {
             res.send(204);
         })
         .catch( err => {
