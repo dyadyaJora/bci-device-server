@@ -3,3 +3,5 @@ node_modules/
 .idea/
 
 analytics/**/*.csv
+
+calculations/venv/
