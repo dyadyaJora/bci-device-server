@@ -1,0 +1,17 @@
+{
+  "name": "udp-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "udp-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5",
+    "kafka-node": "^5.0.0",
+    "memcached": "^2.2.2"
+  }
+}

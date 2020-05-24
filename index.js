@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const config = require('./config.json');
 const Influx = require('influx');
 const mongoose = require('mongoose');
 const inService = require('./controllers/in-service');
@@ -15,14 +16,14 @@ app.use(bodyParser.json());
 
 app.use(cors());
 
-const PORT = 3001;
+const PORT = config.server.port;
 const INFLUX_HOST = 'localhost';
 const DB_NAME = 'vr_data_test';
 const influx = new Influx.InfluxDB({
     host: INFLUX_HOST,
     database: DB_NAME
 });
-const memcached = new Memcached('127.0.0.1:12346');
+const memcached = new Memcached(config.memcached.host + ':' + config.memcached.port);
 const MONGO_URL = "mongodb://localhost:27017/diplom-dev";
 
 app.get('/', function (req, res) {
@@ -195,7 +196,8 @@ app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
         })
         .then(() => {
             console.log("I'M OK!");
-            res.redirect("/research?session=" + sessionId + "&device=" + deviceId);
+            res.send(200);
+            // res.redirect("/research?session=" + sessionId + "&device=" + deviceId);
         })
         .catch((err) => {
             console.error(err);

@@ -1,25 +1,26 @@
 {
   "kafka": {
-    "url": "localhost"
+    "url": "127.0.0.1"
   },
   "mongodb": {
     "url": "localhost"
   },
   "memcached": {
     "host": "127.0.0.1",
-    "port": "12346"
+    "port": "12345"
   },
   "influx": {
-    "host": "localhost",
+    "host": "127.0.0.1",
     "port": "8086",
     "dbName": "device_data",
     "user": "",
     "password": ""
   },
   "udp": {
-    "port": "12345"
+    "port": "12000"
   },
   "server": {
+    "host": "127.0.0.1",
     "port": "3001"
   }
 }

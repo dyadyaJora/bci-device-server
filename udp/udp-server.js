@@ -1,24 +1,20 @@
 const dgram = require('dgram');
 const rp = require('request-promise');
 const server = dgram.createSocket('udp4');
-const Influx = require('influx');
-const INFLUX_HOST = 'localhost';
-const DB_NAME = 'vr_data_test';
-const influx = new Influx.InfluxDB({
-    host: INFLUX_HOST,
-    database: DB_NAME
-});
-const MEMCACHED_HOST = '127.0.0.1';
-const MEMCACHED_PORT = '12346';
+const config = require('../config.json');
+
+const MEMCACHED_HOST = config.memcached.host;
+const MEMCACHED_PORT = config.memcached.port;
 const Memcached = require('memcached');
 const memcached = new Memcached(MEMCACHED_HOST + ':' + MEMCACHED_PORT);
 
-const config = require('../config.json');
 const kafka = require('kafka-node');
 const ClientKafka = new kafka.KafkaClient(config.kafka.url);
 const Producer = new kafka.HighLevelProducer(ClientKafka);
 const { getTopic, TOPICS } = require('../controllers/kafka-service');
 
+const BASE_URI = config.server.host;
+const BASE_PORT = config.server.port;
 
 server.on('error', (err) => {
     console.log(`server error:\n${err.stack}`);
@@ -35,11 +31,12 @@ server.on('message', (msg, rinfo) => {
     validateMessage(message)
         .then(exists => {
             if (exists) {
+                console.log("Saving band power to queue...");
                 return saveBandPowerToQueue(message);
                 // return saveBandPower(message);
             }
 
-            let deviceSessionUrl = 'http://127.0.0.1:3001/api/v1/device/' + message.deviceId + '/session/' + message.sessionId;
+            let deviceSessionUrl = 'http://' + BASE_URI + ':' + BASE_PORT + '/api/v1/device/' + message.deviceId + '/session/' + message.sessionId;
 
             return rp.get(deviceSessionUrl)
                 .then(data => {
@@ -59,24 +56,6 @@ server.on('listening', () => {
     const address = server.address();
     console.log(`server listening ${address.address}:${address.port}`);
 });
-
-function saveBandPower(message) {
-    let alfa = 0, beta = 0;
-    message.data.forEach(item => { alfa += item[0]; beta+=item[1];} );
-    let res = beta/alfa;
-    let point = {
-        measurement: 'band_power',
-        tags: {
-            deviceId: message.deviceId,
-            sessionId: message.sessionId
-        },
-        fields: {
-            band: res
-        },
-        timestamp: +(new Date()) + "000000"
-    }
-    return influx.writePoints([point])
-}
 
 function saveBandPowerToQueue(message) {
     let prepared = calcAlfaBetaRel(message);
@@ -133,10 +112,32 @@ function validateMessage(message) {
     });
 }
 
+function getUdpServerPort() {
+    let port = '';
+    process.argv.slice(2).forEach(item => {
+        let vals = item.split('=');
+        if (vals.length !== 2) {
+            return;
+        }
+
+        if (vals[0] === 'port') {
+            port = vals[1];
+        }
+    });
+
+    if (!port) {
+        console.log('TARGET PORT not found!');
+        process.exit();
+    }
+
+    return port;
+}
+
 (function startUdpServer() {
+    let port = getUdpServerPort();
     getTopic(TOPICS.DATA)
         .then(() => {
-            server.bind(config.udp.port);
+            server.bind(port);
         }).catch(err => {
             console.log('Error starting udp server', err);
         });
