@@ -1,3 +1,5 @@
+const BaseWorker = require('./base-worker');
+const { TOPICS } = require('../controllers/kafka-service');
 const Influx = require('influx');
 const INFLUX_HOST = 'localhost';
 const DB_NAME = 'vr_data_test';
@@ -5,47 +7,48 @@ const influx = new Influx.InfluxDB({
     host: INFLUX_HOST,
     database: DB_NAME
 });
-const config = require('../config.json');
-const kafka = require('kafka-node');
-const ClientKafka = new kafka.KafkaClient(config.kafka.url);
-const Producer = new kafka.HighLevelProducer(ClientKafka);
-const { getConsumer, TOPICS } = require('../controllers/kafka-service');
 
-let consumer = getConsumer(TOPICS.OUTPUT);
-
-consumer.on('message', message => {
-    console.log(message);
-    let value;
-    try {
-        value = JSON.parse(message.value);
-    } catch (e) {
-        return;
+class OutputInfluxWorker extends BaseWorker {
+    constructor() {
+        super(TOPICS.OUTPUT, 'Output_State');
     }
 
-    let pen = value.pen;
-    let mono = value.mono;
-    let stable = value.stable;
-    let sessionId = value.sessionId;
-
-    let res;
-    if (pen > mono && pen > stable) {
-        res = "stress";
-    } else if (stable > pen && stable > mono) {
-        res= "stable";
-    } else {
-        res = "monotony";
-    }
-
-    influx.writePoints([
-        {
-            measurement: "state_status",
-            tags: {
-                sessionId: value.sessionId
-            },
-            fields: { state: res },
-            timestamp: +new Date(value.time) + "000000"
+    process(data) {
+        if (!data.time) {
+            console.log('WRONG data');
+            return;
         }
-    ]);
-});
+        let pen = data.pen;
+        let mono = data.mono;
+        let stable = data.stable;
+        let sessionId = data.sessionId;
 
-console.log("OUTPUT WORKER STARTED");
+        let res;
+        if (pen > mono && pen > stable) {
+            res = 'stress';
+        } else if (stable > pen && stable > mono) {
+            res= 'stable';
+        } else {
+            res = 'monotony';
+        }
+
+        influx.writePoints([
+            {
+                measurement: 'state_status',
+                tags: {
+                    sessionId: data.sessionId
+                },
+                fields: { state: res },
+                timestamp: +new Date(data.time) + '000000'
+            }
+        ]).then(() => {
+            console.log('[' + this.workerName + '] saved');
+        }).catch((err) => {
+            console.error('[' + this.workerName + ']', err);
+        });
+    }
+}
+
+let worker = new OutputInfluxWorker();
+
+worker.start();

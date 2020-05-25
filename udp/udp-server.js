@@ -33,7 +33,6 @@ server.on('message', (msg, rinfo) => {
             if (exists) {
                 console.log("Saving band power to queue...");
                 return saveBandPowerToQueue(message);
-                // return saveBandPower(message);
             }
 
             let deviceSessionUrl = 'http://' + BASE_URI + ':' + BASE_PORT + '/api/v1/device/' + message.deviceId + '/session/' + message.sessionId;
@@ -140,5 +139,6 @@ function getUdpServerPort() {
             server.bind(port);
         }).catch(err => {
             console.log('Error starting udp server', err);
+            process.exit();
         });
 })();
