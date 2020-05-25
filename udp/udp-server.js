@@ -36,7 +36,6 @@ server.on('message', (msg, rinfo) => {
         .then(exists => {
             if (exists) {
                 return saveBandPowerToQueue(message);
-                // return saveBandPower(message);
             }
 
             let deviceSessionUrl = 'http://127.0.0.1:3001/api/v1/device/' + message.deviceId + '/session/' + message.sessionId;
@@ -139,5 +138,6 @@ function validateMessage(message) {
             server.bind(config.udp.port);
         }).catch(err => {
             console.log('Error starting udp server', err);
+            process.exit();
         });
 })();
