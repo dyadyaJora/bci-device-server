@@ -57,9 +57,9 @@ server.on('listening', () => {
 });
 
 function saveBandPowerToQueue(message) {
-    let prepared = calcAlfaBetaRel(message);
+    let prepared = JSON.stringify(message);
     return new Promise((resolve, reject) => {
-        Producer.send([{topic: TOPICS.DATA, messages: [JSON.stringify(prepared)]}], (err, data) => {
+        Producer.send([{topic: TOPICS.DATA, messages: [ prepared ]}], (err, data) => {
             if (!!err) {
                 reject(err);
                 return;
@@ -68,25 +68,6 @@ function saveBandPowerToQueue(message) {
             resolve(data);
         });
     });
-}
-
-function calcAlfaBetaRel(message) {
-    let result = {
-        deviceId: message.deviceId,
-        sessionId: message.sessionId,
-        type: message.type,
-        time: message.time
-    };
-
-    if (!message || !message.data || !message.data.length) {
-        return {};
-    }
-
-    result['data'] = message.data.map(values => {
-        return values[3] / values[2];
-    });
-
-    return result;
 }
 
 function validateMessage(message) {

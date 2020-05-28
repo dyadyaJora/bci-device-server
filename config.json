@@ -1,6 +1,6 @@
 {
   "kafka": {
-    "url": "127.0.0.1"
+    "url": "localhost"
   },
   "mongodb": {
     "url": "localhost"

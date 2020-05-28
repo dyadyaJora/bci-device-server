@@ -1,3 +1,5 @@
+const BaseWorker = require('./base-worker');
+const { TOPICS } = require('../controllers/kafka-service');
 const Influx = require('influx');
 const INFLUX_HOST = 'localhost';
 const DB_NAME = 'vr_data_test';
@@ -6,48 +8,85 @@ const influx = new Influx.InfluxDB({
     database: DB_NAME
 });
 const config = require('../config.json');
-const kafka = require('kafka-node');
-const ClientKafka = new kafka.KafkaClient(config.kafka.url);
-const Producer = new kafka.HighLevelProducer(ClientKafka);
-const { getConsumer, TOPICS } = require('../controllers/kafka-service');
+const USED_FREQ = [
+    "delta",
+    "theta",
+    "alpha",
+    "beta",
+    "gamma"
+];
 
-let consumer = getConsumer(TOPICS.DATA);
+class InputInfluxWorker extends BaseWorker {
+    constructor() {
+        super(TOPICS.DATA, 'BandPower_Input');
+    }
 
+    process(value) {
+        Promise.all([this._saveBandPower(value), this._saveBandPowerRel(value)])
+            .then(() => {
+                console.log('saved');
+                let messageForCalc = {
+                    sessionId: value.sessionId,
+                    deviceId: value.deviceId,
+                    type: value.type,
+                    time: value.time
+                };
+                return this.sendToWorker(TOPICS.CALC, messageForCalc);
+            })
+            .then((res) => {
+                console.log('[' + this.workerName + '] sent to output worker === ' + res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+    }
 
-consumer.on('message', message => {
-    console.log(message);
-    let value = JSON.parse(message.value);
-    saveBandPower(value)
-        .then(() => {
-            console.log('saved');
-            let messageForCalc = {
-                sessionId: value.sessionId,
-                deviceId: value.deviceId,
-                type: value.type,
-                time: value.time
-            }
-            Producer.send([{ topic: TOPICS.CALC, messages: [JSON.stringify(messageForCalc)]}], (err, res) => {})
-        })
-        .catch(err => {
-            console.error(err);
-        })
-});
+    _saveBandPower(value) {
+        let points = [];
 
-function saveBandPower(value) {
-    let fieldObject = {};
-    value.data.forEach((item, i) => {
-        fieldObject['band' + i] = item;
-    });
-    let point = {
-        measurement: 'band_power',
-        tags: {
+        let tags = {
             deviceId: value.deviceId,
             sessionId: value.sessionId
-        },
-        fields: fieldObject,
-        timestamp: +new Date(value.time) + "000000"
+        };
+
+        for (let i = 0; i < USED_FREQ.length; i++) {
+            let fieldObject = {};
+            for (let j = 0; j < value.data.length; j++) {
+                fieldObject['band' + j] = value.data[j][i];
+            }
+            let currentTags = Object.assign({}, tags, { wave: USED_FREQ[i] });
+            points.push({
+                measurement: 'band_power',
+                tags: currentTags,
+                fields: fieldObject,
+                timestamp: +new Date(value.time) + "000000"
+            });
+        }
+
+        return influx.writePoints(points);
     }
-    return influx.writePoints([point])
+
+    _saveBandPowerRel(value) {
+        let betaAlfaRels = value.data.map(values => {
+            return values[3] / values[2];
+        });
+        let fieldObject = {};
+        betaAlfaRels.forEach((item, i) => {
+            fieldObject['band' + i] = item;
+        });
+        let point = {
+            measurement: 'band_power_rel',
+            tags: {
+                deviceId: value.deviceId,
+                sessionId: value.sessionId
+            },
+            fields: fieldObject,
+            timestamp: +new Date(value.time) + "000000"
+        }
+        return influx.writePoints([point])
+    }
 }
 
-console.log('INFLUX WORKER started');
+let worker = new InputInfluxWorker();
+
+worker.start();
