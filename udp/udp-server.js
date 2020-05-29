@@ -9,7 +9,7 @@ const Memcached = require('memcached');
 const memcached = new Memcached(MEMCACHED_HOST + ':' + MEMCACHED_PORT);
 
 const kafka = require('kafka-node');
-const ClientKafka = new kafka.KafkaClient(config.kafka.url);
+const ClientKafka = new kafka.KafkaClient({ kafkaHost: config.kafka.url });
 const Producer = new kafka.HighLevelProducer(ClientKafka);
 const { getTopic, TOPICS } = require('../controllers/kafka-service');
 

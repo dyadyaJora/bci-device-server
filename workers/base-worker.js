@@ -1,6 +1,6 @@
 const config = require('../config.json');
 const kafka = require('kafka-node');
-const ClientKafka = new kafka.KafkaClient(config.kafka.url);
+const ClientKafka = new kafka.KafkaClient({ kafkaHost: config.kafka.url });
 const Producer = new kafka.HighLevelProducer(ClientKafka);
 const kafkaService = require('../controllers/kafka-service');
 

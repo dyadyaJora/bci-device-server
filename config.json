@@ -1,9 +1,9 @@
 {
   "kafka": {
-    "url": "localhost"
+    "url": "localhost:9092"
   },
   "mongodb": {
-    "url": "localhost"
+    "url": "mongodb://user:password@localhost:27017/diplom-dev"
   },
   "memcached": {
     "host": "127.0.0.1",

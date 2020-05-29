@@ -24,7 +24,7 @@ const influx = new Influx.InfluxDB({
     database: DB_NAME
 });
 const memcached = new Memcached(config.memcached.host + ':' + config.memcached.port);
-const MONGO_URL = "mongodb://localhost:27017/diplom-dev";
+const MONGO_URL = config.mongodb.url;
 
 app.get('/', function (req, res) {
     res.send('Hello World!');
