@@ -65,7 +65,7 @@ if __name__ == '__main__':
                 "sessionId": sessionId
             },
             "fields": {
-                "bpm": 0 if math.isnan(measures['bpm']) else round(measures['bpm']),
+                "bpm": 0 if math.isnan(measures['bpm']) else int(round(measures['bpm'])),
                 "rmssd": 0.0 if math.isnan(measures['rmssd']) else measures['rmssd'],
                 "sdnn": 0.0 if math.isnan(measures['sdnn']) else measures['sdnn'],
                 "ic": 0.0 if math.isnan(measures['lf/hf']) else measures['lf/hf'],
@@ -74,4 +74,5 @@ if __name__ == '__main__':
             "time": time_list[len(time_list) - 1]
         }
     ]
+    print(measure_point)
     client.write_points(measure_point, database='vr_data_test')
