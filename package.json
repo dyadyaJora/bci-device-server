@@ -11,7 +11,7 @@
   "dependencies": {
     "argon2": "^0.26.2",
     "cors": "^2.8.5",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "influx": "^5.5.1",
     "kafka-node": "^5.0.0",
     "memcached": "^2.2.2",
